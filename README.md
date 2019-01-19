@@ -2,7 +2,7 @@
 
 ## Aplicacion para mensajeria instantanea (Backend) 
 
-#EN DESARROLLO
+# EN DESARROLLO
 
 ```
 go get github.com/Davidc2525/messager

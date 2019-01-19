@@ -19,7 +19,7 @@ var (
 
 type Conf struct {
 	Addr  string
-	Peers []string
+	//Peers []string
 
 	Seed   string
 	IsSeed bool

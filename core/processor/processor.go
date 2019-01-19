@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"github.com/Davidc2525/messager/cluster/clustermanager"
 	"github.com/Davidc2525/messager/core/endpoint"
+	"github.com/Davidc2525/messager/core/messagemanager"
 	"github.com/Davidc2525/messager/core/packets"
-	"github.com/Davidc2525/messager/core/precensemanager"
-	_ "github.com/Davidc2525/messager/core/precensemanager/providers/etcd_provider_flat"
+	//_ "github.com/Davidc2525/messager/core/precensemanager/providers/etcd_provider_flat"
 	"github.com/Davidc2525/messager/core/restapi"
 	_ "github.com/Davidc2525/messager/core/restapi/api/apiuser"
 	"github.com/Davidc2525/messager/core/sessionmanager"
-	_ "github.com/Davidc2525/messager/core/sessionmanager/providers/etcd"
-	_ "github.com/Davidc2525/messager/core/sessionmanager/providers/memory"
+	//_ "github.com/Davidc2525/messager/core/sessionmanager/providers/etcd"
+	//_ "github.com/Davidc2525/messager/core/sessionmanager/providers/memory"
+	_ "github.com/Davidc2525/messager/core/sessionmanager/providers/redis"
 	"github.com/Davidc2525/messager/log"
 	"github.com/Davidc2525/messager/services/rpc_connection_endpoint/src"
 	"github.com/Davidc2525/messager/user"
@@ -207,7 +208,7 @@ func New(conf Conf) *Processor {
 			uc.Host = hostId
 			uc.Id = id
 
-			if perr := precensemanager.ProcenceManager.Provider.Add(uc.User.Id, hostId+"_"+id); perr == nil {
+			if perr := precensemanager.ProcenceManager.Pder.Add(uc.User.Id, hostId+"_"+id); perr == nil {
 
 				uc.open = true
 
@@ -237,7 +238,7 @@ func New(conf Conf) *Processor {
 							}
 							this.UsersConnMux.Unlock()
 
-							if perr := precensemanager.ProcenceManager.Provider.Remove(uc.User.Id, hostId+"_"+id); perr != nil {
+							if perr := precensemanager.ProcenceManager.Pder.Remove(uc.User.Id, hostId+"_"+id); perr != nil {
 								log.Error.Printf("REMOVE %v", perr)
 							}
 							return
@@ -312,11 +313,11 @@ type worker struct {
 }
 
 func (this *worker) start() {
-	defer func() {
+	/*defer func() {
 		if err := recover(); err != nil {
 			log.Error.Println("error en loop: ", err)
 		}
-	}()
+	}()*/
 
 	for {
 		select {
@@ -402,7 +403,16 @@ func (this *Processor) Start() {
 						datareader := bytes.NewReader(datain)
 
 						json.NewDecoder(datareader).Decode(event)
+						p:=packets.Packet(event)
+						pp:= &messagemanager.ProcessPacket{Receive:make(chan *messagemanager.InfoPacket),Packet:&p}
+						messagemanager.Manager.In <- pp
 
+						info , ok:= <- pp.Receive
+						if ok {
+							if info.Paced{
+								//TODO enviar mensajes a info.To
+							}
+						}
 						//log.Warning.Printf("	NEW EVENT %#v %v", event, ok)
 
 						//this.UsersConnMux.Lock()
@@ -483,6 +493,18 @@ func (this *Processor) Start() {
 						datareader := bytes.NewReader(datain)
 
 						json.NewDecoder(datareader).Decode(message)
+
+						p:=packets.Packet(message)
+						pp:= &messagemanager.ProcessPacket{Receive:make(chan *messagemanager.InfoPacket),Packet:&p}
+						messagemanager.Manager.In <- pp
+
+						info , ok:= <- pp.Receive
+						if ok {
+							if info.Paced{
+								close(pp.Receive)
+								//TODO enviar mensajes a info.To
+							}
+						}
 						//log.Warning.Printf("		NEW MESSAGE %v %#v", runtime.NumGoroutine(), message)
 						this.UsersConnMux.Lock()
 						defer this.UsersConnMux.Unlock()
@@ -674,8 +696,8 @@ func (this *Processor) Start() {
 	//log.Printf("%#v",this.Conf.EndPoints)
 	//log.Println("add end point",k,ep.GetName())
 	//memory.GetProvider()
-	precensemanager.New("etcd_flat")
-	sessionmanager.GetInstance("etcd", "gosessionid", 3600*24*365)
+	//precensemanager.New("etcd_flat")
+	sessionmanager.GetInstance("redis", "gosessionid", 3600*24*365)
 	rapi.Start()
 
 	for _, ep := range this.Conf.EndPoints {

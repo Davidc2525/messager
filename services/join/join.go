@@ -22,11 +22,13 @@ func (this *Join) JoinCluster(a join.JoinArgs, r *join.JoinResponse) error {
 	cm := clustermanager.GetInstance()
 	ac := false //colocar en false si solo se aceptaran los miembros q son pasados en peers
 	log.Info.Println("joining client", a, *r)
-	for _, p := range cm.Server.GetConf().Peers {
-		if p == a.NodeId {
+	if cm.Mode == clustermanager.CLUSTER {
+		for _, p := range cm.Conf.Peers {
+			if p == a.NodeId {
 
-			log.Info.Println("Accept to join node: ", a.NodeId)
-			ac = true
+				log.Info.Println("Accept to join node: ", a.NodeId)
+				ac = true
+			}
 		}
 	}
 	r.Result = ac

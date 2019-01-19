@@ -396,8 +396,8 @@ func newcon(conn *websocket.Conn, w http.ResponseWriter, r *http.Request) {
 		}
 
 		/*
-			precensemanager.ProcenceManager.Provider.Add(user.Id,hid)
-			hosts:=precensemanager.ProcenceManager.Provider.Get(user.Id)
+			precensemanager.ProcenceManager.Pder.Add(user.Id,hid)
+			hosts:=precensemanager.ProcenceManager.Pder.Get(user.Id)
 			ms:=clustermanager.GetInstance().GetMembersBy(hosts)
 			for _,m:= range ms{
 				m.GetRpc().

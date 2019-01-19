@@ -69,6 +69,7 @@ type EventPacket interface {
 	GetBy() string
 	GetTo() string
 	GetId() string
+	GetConvId() string
 }
 
 type MessagePacket interface {
@@ -97,6 +98,10 @@ type DEventPacket struct {
 	Event string            `json:"event"`
 	By    string            `json:"by"`
 	To    string            `json:"to"`
+}
+
+func (this *DEventPacket) GetConvId() string {
+	return this.Cid
 }
 
 func NewDEventPacket() *DEventPacket {

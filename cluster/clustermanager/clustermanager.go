@@ -23,6 +23,11 @@ import (
 	"github.com/Davidc2525/messager/services/test/src"
 )
 
+const (
+	STAND = iota + 1
+	CLUSTER
+)
+
 var (
 	log = mlog.New()
 )
@@ -33,6 +38,10 @@ type ClusterManager struct {
 	Members   map[string]*client.Client
 	memberIn  chan client.Client
 	memberOut chan client.Client
+
+	Mode int
+
+	Conf *Conf
 
 	discoveryIn  chan string
 	discoveryOut chan string
@@ -86,11 +95,22 @@ func GetInstance() *ClusterManager {
 	return instance
 }
 
+type Conf struct {
+	Peers      []string
+	ServerConf *server.Conf
+	ClientConf *client.Conf
+}
+
 //Unirse al cluster, crear un server y se conecta con los demas
-func (this *ClusterManager) StartAndJoin(conf *server.Conf, services ...interface{}) {
+func (this *ClusterManager) StartAndJoin(conf *Conf, services ...interface{}) {
 
-	this.Server = server.New(conf)
-
+	this.Server = server.New(conf.ServerConf)
+	this.Conf = conf
+	if len(conf.Peers) > 0{
+		this.Mode = CLUSTER
+	}else{
+		this.Mode = STAND
+	}
 	go func() {
 		for {
 			time.Sleep(time.Second * 10)
@@ -129,7 +149,7 @@ func (this *ClusterManager) StartAndJoin(conf *server.Conf, services ...interfac
 	}()
 
 	go func() {
-		if len(this.Server.GetConf().Peers) == 0 {
+		if len(this.Conf.Peers) == 0 {
 			return
 		}
 
@@ -208,9 +228,9 @@ func (this *ClusterManager) waitForMemberDiscovery() { //escuchar peers para con
 }
 
 func (this *ClusterManager) conectWithMembers() { //conectar directamente pasados por -peers
-	log.Trace.Println("peers", this.Server.GetConf().Peers)
-	if len(this.Server.GetConf().Peers) >= 1 {
-		for _, v := range this.Server.GetConf().Peers {
+	log.Trace.Println("peers", this.Conf.Peers)
+	if len(this.Conf.Peers) >= 1 {
+		for _, v := range this.Conf.Peers {
 			if v != this.Server.GetConf().Addr && v != "" {
 				//this.ConectWithMember(v)
 				this.discoveryIn <- v
@@ -224,9 +244,9 @@ func (this *ClusterManager) ConectWithMember(addr string) {
 	cConf.ServerAddr = this.Server.GetConf().Addr
 	cConf.ServerId = this.Server.Id
 	cConf.Addr = addr
-	cConf.Retry = true
-	cConf.RetryCount = 10000
-	cConf.RetryDelay = 1
+	cConf.Retry = this.Conf.ClientConf.Retry
+	cConf.RetryCount = this.Conf.ClientConf.RetryCount
+	cConf.RetryDelay = this.Conf.ClientConf.RetryDelay
 
 	go client.New(cConf, this.memberIn, this.memberOut)
 }
