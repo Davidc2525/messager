@@ -1,6 +1,6 @@
 package messagemanager
 
-import "github.com/Davidc2525/messager/user"
+import "github.com/Davidc2525/messager/core/user"
 
 //interfas para operaciones
 type Op interface {

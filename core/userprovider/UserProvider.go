@@ -2,7 +2,7 @@ package userprovider
 
 import (
 	"fmt"
-	"github.com/Davidc2525/messager/user"
+	"github.com/Davidc2525/messager/core/user"
 	//"github.com/Davidc2525/test_signleton/userprovider"
 )
 

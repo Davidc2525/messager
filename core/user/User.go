@@ -1,9 +1,8 @@
 package user
 
 type User struct {
-	Id   string      `json:"id"`
-	Name string      `json:"name"`
-	Mail chan string `json:"mail"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func (this *User) String() string {

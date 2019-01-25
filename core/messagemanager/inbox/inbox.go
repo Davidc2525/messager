@@ -3,6 +3,8 @@ package inbox
 import (
 	"fmt"
 	. "github.com/Davidc2525/messager/core/messagemanager/inboxitem"
+	"github.com/Davidc2525/messager/core/user"
+
 	"sync"
 )
 
@@ -28,6 +30,7 @@ type Get struct {
 	Id      string
 }
 
+//ir por una conversacion (inbox item)
 func NewGet() *Get {
 	return &Get{Receive: make(chan *GetResult)}
 }
@@ -55,18 +58,19 @@ type Del struct {
 }
 
 type Inbox struct {
+	Owner *user.User   `json:"owner"`
 	Id    string       `json:"id"`
 	Items []*InboxItem `json:"items"`
 	lock  sync.Mutex   `json:"-"`
 
-	Close chan bool `json:"-"`
+	//Close chan bool `json:"-"`
 
-	Op chan Op `json:"-"`
+	//Op chan Op `json:"-"`
 }
 
 func NewInbox() *Inbox {
-	inbox := &Inbox{Items: []*InboxItem{}, Close: make(chan bool), Op: make(chan Op, 10)}
-	go func() {
+	inbox := &Inbox{Items: []*InboxItem{}}
+	/*go func() {
 
 		for {
 			select {
@@ -117,7 +121,7 @@ func NewInbox() *Inbox {
 			}
 		}
 
-	}()
+	}()*/
 	return inbox
 }
 
@@ -127,11 +131,13 @@ func (this *Inbox) PutFromt(item *InboxItem) {
 
 func (this *Inbox) PutBack(item *InboxItem) {
 	//this.PutIn(item, len(this.Items))
+	this.lock.Lock()
+	defer this.lock.Unlock()
 	this.Items = append(this.Items, item)
 }
 func (this *Inbox) PutIn(item *InboxItem, index int) {
-	//this.lock.Lock()
-	//defer this.lock.Unlock()
+	this.lock.Lock()
+	defer this.lock.Unlock()
 	if index > len(this.Items) {
 		index = len(this.Items)
 	}
@@ -145,8 +151,8 @@ func (this *Inbox) PutIn(item *InboxItem, index int) {
 	this.Items = e
 }
 func (this *Inbox) DeleteIn(index int) {
-	//this.lock.Lock()
-	//defer this.lock.Unlock()
+	this.lock.Lock()
+	defer this.lock.Unlock()
 	if index < 0 {
 		return
 	}
@@ -165,6 +171,9 @@ func (this *Inbox) DeleteIn(index int) {
 func (this *Inbox) MoveFromt(item *InboxItem) {
 	index := this.IndexOf(item)
 	if index < 0 {
+		return
+	}
+	if index == 0 {
 		return
 	}
 	this.DeleteIn(this.IndexOf(item))
@@ -188,17 +197,22 @@ func (this *Inbox) MoveTo(item *InboxItem, index int) {
 	this.PutIn(item, index)
 }
 func (this *Inbox) Get(index int) (*InboxItem, error) {
-	//this.lock.Lock()
-	//defer this.lock.Unlock()
+	this.lock.Lock()
+	defer this.lock.Unlock()
 	if index > len(this.Items)-1 || index < 0 {
 		return nil, fmt.Errorf("Item %v no exist", index)
 	}
-	return this.Items[index], nil
+
+	item := this.Items[index]
+	if item == nil {
+		return nil, fmt.Errorf("Item %v no exist", index)
+	}
+	return item, nil
 }
 
 func (this *Inbox) IndexOf(item *InboxItem) int {
-	//this.lock.Lock()
-	//defer this.lock.Unlock()
+	this.lock.Lock()
+	defer this.lock.Unlock()
 	var index = -1
 	for k, i := range this.Items {
 		if i == item {
@@ -210,8 +224,8 @@ func (this *Inbox) IndexOf(item *InboxItem) int {
 }
 
 func (this *Inbox) IndexOfById(item string) int {
-	//this.lock.Lock()
-	//defer this.lock.Unlock()
+	this.lock.Lock()
+	defer this.lock.Unlock()
 	var index = -1
 	for k, i := range this.Items {
 		if i.Id == item {

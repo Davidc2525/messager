@@ -8,17 +8,17 @@ import (
 	"github.com/Davidc2525/messager/core/endpoint"
 	"github.com/Davidc2525/messager/core/endpoint/websocketendpoint"
 	"github.com/Davidc2525/messager/core/messagemanager"
-	"github.com/Davidc2525/messager/core/messagemanager/provider/memoryprobider"
+	"github.com/Davidc2525/messager/core/messagemanager/provider/default_provider"
 	"github.com/Davidc2525/messager/core/processor"
 	"github.com/Davidc2525/messager/core/restapi"
+	"github.com/Davidc2525/messager/core/user"
+	"github.com/Davidc2525/messager/core/userprovider"
 	"github.com/Davidc2525/messager/log"
 	"github.com/Davidc2525/messager/services/join"
 	"github.com/Davidc2525/messager/services/new_user_conn"
 	"github.com/Davidc2525/messager/services/ping"
 	"github.com/Davidc2525/messager/services/rpc_connection_endpoint"
 	"github.com/Davidc2525/messager/services/test"
-	"github.com/Davidc2525/messager/user"
-	"github.com/Davidc2525/messager/userprovider"
 	"runtime"
 	"strings"
 	"time"
@@ -87,7 +87,7 @@ func Start() {
 	conf := &server.Conf{Addr: addrServer, IsSeed: isSeed, Seed: seed}
 	clusterConf := &clustermanager.Conf{Peers: peers, ServerConf: conf, ClientConf: clientConf}
 
-	messagemanager.Register("memory",memoryprobider.NewMemoryProvider())
+	messagemanager.Register("memory", default_provider.NewDefaultProvider())
 	messagemanager.InitManager("memory")
 
 	cm := clustermanager.GetInstance()
@@ -99,6 +99,12 @@ func Start() {
 		new(test.Test),
 		rpc,
 		new(new_user_conn.NewConnUser))
+
+
+
+	messagemanager.Manager.Pder.GetStore().CreateInbox(&user.User{Id:"123"},[]*user.User{})
+	messagemanager.Manager.Pder.GetStore().CreateInbox(&user.User{Id:"55"},[]*user.User{})
+
 	for {
 		//fmt.Println(inst.Repository().Get("cm"))
 		time.Sleep(time.Second * 2)

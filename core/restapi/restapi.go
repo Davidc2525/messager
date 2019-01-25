@@ -43,6 +43,7 @@ func (this *RestApi) Start() {
 	fmt.Println("starting restapi")
 
 	s.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+
 		writer.Write([]byte("Debe espesificar un api"))
 	})
 

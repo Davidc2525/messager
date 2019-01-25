@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/Davidc2525/messager/core/precensemanager"
 	"github.com/Davidc2525/messager/log"
-	"github.com/Davidc2525/messager/user"
+	"github.com/Davidc2525/messager/core/user"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/clientv3/concurrency"
 	"regexp"

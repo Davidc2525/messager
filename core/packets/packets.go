@@ -1,7 +1,8 @@
 package packets
 
 import (
-	"github.com/Davidc2525/messager/user"
+	"github.com/Davidc2525/messager/core/messagemanager/message"
+	"github.com/Davidc2525/messager/core/user"
 	"github.com/gorilla/websocket"
 )
 
@@ -75,9 +76,11 @@ type EventPacket interface {
 type MessagePacket interface {
 	Packet
 	GetMessage() string
+	GetTType() uint8
 	GetBy() string
 	GetTo() string
 	GetConvId() string
+	GetTTypes()[]*message.TType
 }
 
 type PrecensePacket interface {
@@ -92,16 +95,16 @@ type UserPacket interface {
 /*Implementaciones*/
 
 type DEventPacket struct {
-	Kind  string            `json:"kind"`
-	Attr  map[string]string `json:"attr"`
-	Cid   string            `json:"cid"`
-	Event string            `json:"event"`
-	By    string            `json:"by"`
-	To    string            `json:"to"`
+	Kind           string            `json:"kind"`
+	Attr           map[string]string `json:"attr"`
+	IdConversation string            `json:"id_conversation"`
+	Event          string            `json:"event"`
+	By             string            `json:"by"`
+	To             string            `json:"to"`
 }
 
 func (this *DEventPacket) GetConvId() string {
-	return this.Cid
+	return this.IdConversation
 }
 
 func NewDEventPacket() *DEventPacket {
@@ -136,17 +139,22 @@ func (this *DEventPacket) GetBy() string {
 }
 
 func (this *DEventPacket) GetId() string {
-	return this.Cid
+	return this.IdConversation
 }
 
 //MessagePacket implementation
 type DMessagePacket struct {
+	TType          uint8             `json:"t_type"`
 	Attr           map[string]string `json:"attr"`
 	Kind           string            `json:"kind"`
 	IdConversation string            `json:"id_conversation"`
 	By             string            `json:"by"`
 	To             string            `json:"to"`
 	Message        string            `json:"message"`
+	Payload        []*message.TType  `json:"payload"`
+}
+func (this *DMessagePacket) GetTTypes() []*message.TType{
+	return this.Payload
 }
 
 func (this *DMessagePacket) SetAttr(key string, value string) {
@@ -177,7 +185,7 @@ func (this *DMessagePacket) GetConvId() string {
 }
 
 func NewDMessagePacket() *DMessagePacket {
-	return &DMessagePacket{Kind: "message", Attr: make(map[string]string)}
+	return &DMessagePacket{Kind: "message", Attr: make(map[string]string),Payload:[]*message.TType{}}
 }
 
 func (this *DMessagePacket) GetKind() string {
@@ -187,6 +195,22 @@ func (this *DMessagePacket) GetKind() string {
 func (this *DMessagePacket) GetMessage() string {
 	return this.Message
 }
+
+func (this *DMessagePacket) GetTType() uint8 {
+	return this.TType
+}
+
+/*func (this *DMessagePacket) GetContent() message.Content {
+	var c message.Content
+	switch this.TypeContent {
+	case message.PLAINT_TEXT:
+		c := message.NewPlaintTextContent()
+		c.SetContent(this.Message)
+
+		return c
+	}
+	return c
+}*/
 
 //UserPacket implementation
 type DUserPacket struct {

@@ -9,14 +9,15 @@ import (
 	"github.com/Davidc2525/messager/core/packets"
 	//_ "github.com/Davidc2525/messager/core/precensemanager/providers/etcd_provider_flat"
 	"github.com/Davidc2525/messager/core/restapi"
+	_ "github.com/Davidc2525/messager/core/restapi/api/apimessager"
 	_ "github.com/Davidc2525/messager/core/restapi/api/apiuser"
 	"github.com/Davidc2525/messager/core/sessionmanager"
 	//_ "github.com/Davidc2525/messager/core/sessionmanager/providers/etcd"
 	//_ "github.com/Davidc2525/messager/core/sessionmanager/providers/memory"
 	_ "github.com/Davidc2525/messager/core/sessionmanager/providers/redis"
+	"github.com/Davidc2525/messager/core/user"
 	"github.com/Davidc2525/messager/log"
 	"github.com/Davidc2525/messager/services/rpc_connection_endpoint/src"
-	"github.com/Davidc2525/messager/user"
 	"reflect"
 	"runtime"
 	"strings"
@@ -45,6 +46,9 @@ func deleteAllPrefix(mapc MapCOnn, prefix string) {
 
 //filtrar conexiones por prefijo uid_cid
 func getByPrefix(m MapCOnn, prefix string) (conns []endpoint.ConnectionEndPoint) {
+
+	Pross.LoockMapConn.Lock()
+	defer Pross.LoockMapConn.Unlock()
 	for k, v := range m {
 		if strings.HasPrefix(k, prefix) {
 			conns = append(conns, v)
@@ -121,7 +125,8 @@ type Processor struct {
 	UsersConn       map[string]map[string]*UserConn                   //borrar
 	UsersConnEp     map[string]map[string]endpoint.ConnectionEndPoint //borrar
 	UsersConnEpFlat MapCOnn
-	UsersConnMux    sync.Mutex                           //borrar
+	UsersConnMux    sync.Mutex //borrar
+	LoockMapConn    sync.Mutex
 	EndPoints       map[string]endpoint.EndPointProvider //borar
 
 	StreamIn chan packets.Container
@@ -177,123 +182,6 @@ func New(conf Conf) *Processor {
 	return p
 }
 
-/*func (this *Processor) handleConn(conn *NewConn) {
-	defer func() {
-		if v := recover(); v != nil {
-			log.Warning.Println(v)
-		}
-	}()
-	uc := NewUserConn(conn.Cep)
-
-	//uc.Conn.Start()
-	uc.open = false
-	uc.Conn.SetHandleClose(func() {
-		uc.open = false
-		uc.DisconectChan <- true
-	})
-	uc.Conn.Start()
-	if uc.Conn.GetWriter() == nil {
-
-	} else {
-
-	}
-
-	if sess, err := sessionmanager.GlobalSessions.GetSession(uc.Conn.GetWriter(), uc.Conn.GetRequest(), false); err == nil {
-		uid := sess.Get("uid").(string)
-		if userStore, userErr := userprovider.GetInstance().GetUserById(uid); userErr == nil {
-			var id = ksuid.New().String()
-			hostId := clustermanager.GetInstance().Server.GetConf().Addr
-
-			uc.User = userStore
-			uc.Host = hostId
-			uc.Id = id
-
-			if perr := precensemanager.ProcenceManager.Pder.Add(uc.User.Id, hostId+"_"+id); perr == nil {
-
-				uc.open = true
-
-				this.UsersConnMux.Lock()
-				if conns, ok := this.UsersConn[uc.User.Id]; ok {
-					conns[uc.Id] = uc
-				} else { // si no esta agregar al map
-					this.UsersConn[uc.User.Id] = make(map[string]*UserConn)
-					this.UsersConn[uc.User.Id][uc.Id] = uc
-				}
-				this.UsersConnMux.Unlock()
-
-				go func() {
-					for {
-						select {
-						case <-uc.DisconectChan:
-							uc.open = false
-							close(uc.DisconectChan)
-							close(uc.MessageIn)
-							close(uc.PrecenseIn)
-							log.Warning.Println("Señal para desconectar", id)
-							this.UsersConnMux.Lock()
-							if conns, ok := this.UsersConn[uc.User.Id]; ok {
-								if _, cok := conns[uc.Id]; cok {
-									delete(conns, uc.Id)
-								}
-							}
-							this.UsersConnMux.Unlock()
-
-							if perr := precensemanager.ProcenceManager.Pder.Remove(uc.User.Id, hostId+"_"+id); perr != nil {
-								log.Error.Printf("REMOVE %v", perr)
-							}
-							return
-
-						case message := <-uc.MessageIn:
-							data := bytes.Buffer{}
-							json.NewEncoder(&data).Encode(message)
-							uc.Conn.Send() <- data.Bytes()
-						}
-					}
-				}()
-
-				for uc.open { //read web socket
-					mp := packets.NewDMessagePacket()
-					select {
-					case m, ok := <-uc.Conn.Receive():
-						//si ok == false es por q la corrutina de websocket ya cerro el canal
-						//per aun no ha sido llamada la funcion en HandleClose, por lo tanto this.open sigue siendo true
-						//para cuando se comprueba q ok == false this.open se pasa a false y se sale del bucle
-						//y HandleClose es llamada y cierra los demas canales
-						if !ok {
-
-							log.Error.Println("no ok", ok)
-							//uc.DisconectChan <- true
-							uc.open = false
-							return
-						}
-						if len(m) > 0 {
-							if m[1] == 33 { // 33 == !
-								if m[0] == 109 { // 109 == m
-									data := bytes.NewReader(m[2:])
-									jd := json.NewDecoder(bufio.NewReader(data))
-									jd.Decode(mp)
-
-									this.MessageIn <- mp
-									//uc.MessageIn <- mp
-								}
-							}
-						}
-					}
-
-				}
-
-			} else {
-				log.Error.Printf("ADD %v", perr)
-				uc.Conn.Close()
-			}
-		} else {
-			uc.Conn.Close()
-		}
-	} else {
-		uc.Conn.Close()
-	}
-
-}*/
 func IsInstanceOf(objectPtr, typePtr interface{}) bool {
 	return reflect.TypeOf(objectPtr) == reflect.TypeOf(typePtr)
 }
@@ -313,11 +201,13 @@ type worker struct {
 }
 
 func (this *worker) start() {
-	/*defer func() {
+	defer func() {
 		if err := recover(); err != nil {
 			log.Error.Println("error en loop: ", err)
+			//this = newWorker(this.id)
+			//go this.start()
 		}
-	}()*/
+	}()
 
 	for {
 		select {
@@ -403,13 +293,21 @@ func (this *Processor) Start() {
 						datareader := bytes.NewReader(datain)
 
 						json.NewDecoder(datareader).Decode(event)
-						p:=packets.Packet(event)
-						pp:= &messagemanager.ProcessPacket{Receive:make(chan *messagemanager.InfoPacket),Packet:&p}
+
+						var connsBy []endpoint.ConnectionEndPoint = getByPrefix(this.UsersConnEpFlat, NewKey2(event.GetBy(), "")) //uid_
+						var connsTo = []endpoint.ConnectionEndPoint{}//:= getByPrefix(this.UsersConnEpFlat, NewKey2(message.GetTo(), "")) //uid_
+
+						//p:=packets.Packet(event)
+						pp := &messagemanager.ProcessPacket{Receive: make(chan *messagemanager.InfoPacket), Packet: event}
 						messagemanager.Manager.In <- pp
 
-						info , ok:= <- pp.Receive
+						info, ok := <-pp.Receive
 						if ok {
-							if info.Paced{
+							if info.Paced {
+								for _, u := range info.To {
+									connsTo = append(connsTo, getByPrefix(this.UsersConnEpFlat, NewKey2(u.Id, ""))...)
+								}
+								close(pp.Receive)
 								//TODO enviar mensajes a info.To
 							}
 						}
@@ -419,9 +317,7 @@ func (this *Processor) Start() {
 						//defer this.UsersConnMux.Unlock()
 						//hostid := clustermanager.GetInstance().Server.GetConf().Addr
 
-						connsBy := getByPrefix(this.UsersConnEpFlat, NewKey2(event.GetBy(), "")) //uid_
-						connsTo := getByPrefix(this.UsersConnEpFlat, NewKey2(event.GetTo(), "")) //uid_
-						if event.GetBy() != event.GetTo() {                                      //TODO add lock
+						if event.GetBy() != event.GetTo() { //TODO add lock
 
 							if container.GetClass() == packets.Remote { //remote
 
@@ -487,6 +383,7 @@ func (this *Processor) Start() {
 				t := func(container packets.Container) func() {
 					return func() {
 						message := packets.NewDMessagePacket()
+
 						datap := container.GetData()
 						ctype := datap[0:2]
 						datain := datap[2:]
@@ -494,14 +391,21 @@ func (this *Processor) Start() {
 
 						json.NewDecoder(datareader).Decode(message)
 
-						p:=packets.Packet(message)
-						pp:= &messagemanager.ProcessPacket{Receive:make(chan *messagemanager.InfoPacket),Packet:&p}
+						//p:=packets.Packet(message)
+						pp := &messagemanager.ProcessPacket{Receive: make(chan *messagemanager.InfoPacket), Packet: message}
 						messagemanager.Manager.In <- pp
 
-						info , ok:= <- pp.Receive
+						var connsBy []endpoint.ConnectionEndPoint = getByPrefix(this.UsersConnEpFlat, NewKey2(message.GetBy(), "")) //uid_
+						var connsTo = []endpoint.ConnectionEndPoint{}                                                               //:= getByPrefix(this.UsersConnEpFlat, NewKey2(message.GetTo(), "")) //uid_
+
+						info, ok := <-pp.Receive
 						if ok {
-							if info.Paced{
+							if info.Paced {
+								for _, u := range info.To {
+									connsTo = append(connsTo, getByPrefix(this.UsersConnEpFlat, NewKey2(u.Id, ""))...)
+								}
 								close(pp.Receive)
+								//close(pp.Receive)
 								//TODO enviar mensajes a info.To
 							}
 						}
@@ -509,9 +413,6 @@ func (this *Processor) Start() {
 						this.UsersConnMux.Lock()
 						defer this.UsersConnMux.Unlock()
 						//hostid := clustermanager.GetInstance().Server.GetConf().Addr
-
-						connsBy := getByPrefix(this.UsersConnEpFlat, NewKey2(message.GetBy(), "")) //uid_
-						connsTo := getByPrefix(this.UsersConnEpFlat, NewKey2(message.GetTo(), "")) //uid_
 
 						if message.GetBy() != message.GetTo() { //TODO add lock
 

@@ -1,10 +1,17 @@
+/*
+manager -> Provider -> StoreProvider
+*/
 package messagemanager
 
 import (
+	"github.com/Davidc2525/messager/core/messagemanager/inboxitem"
+	"github.com/Davidc2525/messager/core/messagemanager/message"
+	"github.com/Davidc2525/messager/core/messagemanager/storeprovider"
 	"github.com/Davidc2525/messager/core/packets"
+	"github.com/Davidc2525/messager/core/user"
 	"github.com/Davidc2525/messager/log"
-	"github.com/Davidc2525/messager/user"
 	"sync"
+	"time"
 )
 
 var (
@@ -20,8 +27,19 @@ const (
 	DELETE
 )
 
+/*
+interface de alto nivel para mensajeria.
+Se comunica con StoreProvider
+*/
 type Provider interface {
-	MakeOp() chan Op
+	//MakeOp() chan Op
+	GetStore() storeprovider.StoreProvider
+
+	GetMembersOfItem(usr *user.User, itemId string) ([]*user.User,error)
+	GetMembersOfItemWithoutMe(usr *user.User, itemId string) ([]*user.User,error)
+	UpdateAndGetMembersOfItem(usr *user.User, itemId string) ([]*user.User,error)
+	UpdateAndGetItem(usr *user.User, itemId string) (*inboxitem.InboxItem,error)
+	DeleteItem(usr *user.User, itemId string) error
 }
 
 type InfoPacket struct {
@@ -33,9 +51,15 @@ type InfoPacket struct {
 //q tiene un canal para enviar informacion de vuelta
 type ProcessPacket struct { //actor
 	Receive chan *InfoPacket
-	Packet  *packets.Packet
+	Packet  packets.Packet
 }
 
+/*
+Administrador de mensajeria,
+provee una interface basica para manejar los paquetes, tiene proveedor para
+tener un acceso de mas bajo nivel:
+manager -> Provider -> StoreProvider
+*/
 type MessageManager struct {
 	Pder Provider
 
@@ -62,6 +86,7 @@ func InitManager(provider string) {
 func init() {
 	//InitManager("memory")
 }
+
 func (this *MessageManager) start() {
 	go func() {
 
@@ -73,20 +98,39 @@ func (this *MessageManager) start() {
 			select {
 			case p, ok = <-this.In:
 				if ok {
-					switch v := (*p.Packet).(type) {
+					log.Info.Printf("in manager : %#v\n", p)
+					switch v := (p.Packet).(type) {
 					case packets.MessagePacket:
 						log.Info.Println("in manager message: MESSAGE", v)
-						close(p.Receive)
-						break
-						updateOp :=  NewUpdateAndGetMembers(&user.User{Id:v.GetBy()},v.GetConvId())
-						this.Pder.MakeOp() <- updateOp
+						//close(p.Receive)
+						//break
+						//updateOp := NewUpdateAndGetMembers(&user.User{Id: v.GetBy()}, v.GetConvId())
+						usr:=&user.User{Id: v.GetBy()}
+						if item,err :=this.Pder.UpdateAndGetItem(usr,v.GetConvId()); err==nil{
 
-						if r,ok := <-updateOp.Receive ; ok{
-							p.Receive <- &InfoPacket{Paced:true,To:r}
+							var id float64 = (1<<64-1) - float64(time.Now().UnixNano())
+							msg := message.NewMessage(id)
+							msg.Payload = v.GetTTypes()
+							msg.By = v.GetBy()
+							msg.SendAt = time.Now().Unix()*1000
+							//msg.AppendTType(v.GetTType(),[]byte(v.GetMessage()))
+							this.Pder.GetStore().StoreMessage(item,msg)
+
+							members,_:=this.Pder.GetMembersOfItemWithoutMe(usr,v.GetConvId())
+							p.Receive <- &InfoPacket{Paced: true, To: members}
+
+
+						}else{
+							p.Receive <- &InfoPacket{Paced: false}
 						}
+
 					case packets.EventPacket:
 						log.Info.Println("in manager message: EVENT", v)
-						close(p.Receive)
+						if members,err :=this.Pder.GetMembersOfItemWithoutMe(&user.User{Id: v.GetBy()},v.GetConvId()); err==nil{
+							p.Receive <- &InfoPacket{Paced: true, To: members}
+						}else{
+							p.Receive <- &InfoPacket{Paced: false}
+						}
 					}
 				}
 			}

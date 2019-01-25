@@ -185,10 +185,16 @@ func GetProvider() sessionmanager.Provider {
 
 func init() {
 	cli := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs: []string{":7000", ":7005"},
+		Addrs: []string{
+			"192.168.0.1:7000",
+			"192.168.0.1:7001",
+			"192.168.0.1:7002",
+			"192.168.0.1:7003",
+			"192.168.0.1:7004",
+			"192.168.0.1:7005"},
 	})
 	cli.Ping()
-
+	//cli.ZAdd("",redis.Z{})
 	/*cli := redis.NewClient(&redis.Options{
 
 		Addr:     "localhost:30001",

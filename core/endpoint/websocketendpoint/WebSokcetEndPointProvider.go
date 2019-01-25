@@ -10,8 +10,8 @@ import (
 	"github.com/Davidc2525/messager/core/sessionmanager"
 	"github.com/Davidc2525/messager/log"
 	"github.com/Davidc2525/messager/services/new_user_conn/src"
-	user2 "github.com/Davidc2525/messager/user"
-	"github.com/Davidc2525/messager/userprovider"
+	user2 "github.com/Davidc2525/messager/core/user"
+	"github.com/Davidc2525/messager/core/userprovider"
 	"github.com/gorilla/websocket"
 	"github.com/segmentio/ksuid"
 	"html/template"
@@ -612,7 +612,7 @@ const tpl string = `{{if .Login}}
                             event:"init_typing",
                             by:uid,
                             to,
-                            id_conversation: "cid",
+                            id_conversation: to,
                         }
                         this.soc.send("e!" + JSON.stringify(payload_init_typing, null, 2));
                         typing = true
@@ -627,7 +627,7 @@ const tpl string = `{{if .Login}}
                         event:"leave_typing",
                         by:uid,
                         to,
-                        id_conversation: "cid",
+                        id_conversation: to,
                     }
                     this.soc.send("e!" + JSON.stringify(payload_leave_typing, null, 2));
                     clearInterval(inter)
@@ -656,8 +656,14 @@ const tpl string = `{{if .Login}}
                     message: msg,
                     by: uid,
                     to,
-                    id_conversation: "cid",
-
+					t_type:"0",
+                    id_conversation: to,
+					payload:[
+						{
+							class:"0",
+							data:msg
+						}
+					]
                 }
 
                 this.soc.send("m!" + JSON.stringify(packetMessage, null, 2));
