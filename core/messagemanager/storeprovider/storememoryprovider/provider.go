@@ -2,15 +2,16 @@ package storememoryprovider
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/Davidc2525/messager/core/messagemanager/inbox"
 	"github.com/Davidc2525/messager/core/messagemanager/inboxitem"
 	"github.com/Davidc2525/messager/core/messagemanager/message"
 	"github.com/Davidc2525/messager/core/messagemanager/storeprovider"
 	"github.com/Davidc2525/messager/core/user"
-	"github.com/Davidc2525/messager/log"
+	mlog "github.com/Davidc2525/messager/log"
 	"github.com/segmentio/ksuid"
-	"sync"
-	"time"
 )
 
 var (
@@ -132,8 +133,8 @@ func (this *MemoryStorage) GetPrivateItem(usr1 *user.User, usr2 *user.User) (str
 	} else if s := this.GetSubProvider(); s != nil {
 		if idItem, err := this.GetSubProvider().GetPrivateItem(usr1, usr2); err == nil {
 			return idItem, err
-		}else{
-			return idItem,err
+		} else {
+			return idItem, err
 		}
 	} else {
 		return "", fmt.Errorf("no se econtro ningun item")
@@ -171,10 +172,10 @@ func (this *MemoryStorage) CreateInboxWith(usr *user.User, in *inbox.Inbox) erro
 		if this.GetSubProvider() != nil {
 			if err := this.GetSubProvider().CreateInboxWith(usr, in); err != nil {
 				log.Warning.Println("no se pudo crear el inbox en sub provider: ", err)
-			}else{
+			} else {
 				this.Inboxs[usr.Id] = in
 			}
-		}else{
+		} else {
 			this.Inboxs[usr.Id] = in
 		}
 		return nil
@@ -201,14 +202,13 @@ func (this *MemoryStorage) CreateInbox(usr *user.User, members []*user.User) (*i
 		newInbox.Id = id
 		newInbox.Owner = usr
 
-
 		if this.GetSubProvider() != nil {
 			if err := this.GetSubProvider().CreateInboxWith(usr, newInbox); err != nil {
 				log.Warning.Println("no se pudo crear el inbox en sub provider: ", err)
-			}else{
+			} else {
 				this.Inboxs[usr.Id] = newInbox
 			}
-		}else{
+		} else {
 			this.Inboxs[usr.Id] = newInbox
 		}
 		return newInbox, nil
@@ -236,6 +236,7 @@ func (this *MemoryStorage) DeleteInbox(usr *user.User, in *inbox.Inbox) error {
 	return nil
 }
 
+//guardar todos los inbox en memoria
 func (this *MemoryStorage) SaveAllInbox() error {
 	//this.lock.Lock()
 	//defer this.lock.Unlock()

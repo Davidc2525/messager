@@ -103,12 +103,15 @@ func (this *RedisStoreProvider) CreateInbox(usr *user.User, members []*user.User
 
 func (this *RedisStoreProvider) CreateInboxWith(usr *user.User, in *inbox.Inbox) error {
 	status := this.cli.Get("inbox:" + usr.Id)
-	if s, err := status.Result(); err == nil || len(s) > 0 {
-		return fmt.Errorf("el usuario %v ya tiene inbox", usr)
-	} else {
+	if err := status.Err(); err == redis.Nil { // si no existe, se crea un inbox para ese usuario
+
 		var network bytes.Buffer // Stand-in for the network.
 		json.NewEncoder(&network).Encode(in)
 		this.cli.Set("inbox:"+usr.Id, network.String(), 0)
+
+	} else {
+
+		return fmt.Errorf("el usuario %v ya tiene inbox: %v, %v", usr, err)
 	}
 
 	return nil

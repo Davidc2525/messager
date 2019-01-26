@@ -6,7 +6,5 @@ type User struct {
 }
 
 func (this *User) String() string {
-
 	return "User(id: " + this.Id + ", Name: " + this.Name + ")"
-
 }

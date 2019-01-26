@@ -2,6 +2,10 @@ package core
 
 import (
 	"flag"
+	"runtime"
+	"strings"
+	"time"
+
 	"github.com/Davidc2525/messager/cluster/client"
 	"github.com/Davidc2525/messager/cluster/clustermanager"
 	"github.com/Davidc2525/messager/cluster/server"
@@ -13,15 +17,12 @@ import (
 	"github.com/Davidc2525/messager/core/restapi"
 	"github.com/Davidc2525/messager/core/user"
 	"github.com/Davidc2525/messager/core/userprovider"
-	"github.com/Davidc2525/messager/log"
+	mlog "github.com/Davidc2525/messager/log"
 	"github.com/Davidc2525/messager/services/join"
 	"github.com/Davidc2525/messager/services/new_user_conn"
 	"github.com/Davidc2525/messager/services/ping"
 	"github.com/Davidc2525/messager/services/rpc_connection_endpoint"
 	"github.com/Davidc2525/messager/services/test"
-	"runtime"
-	"strings"
-	"time"
 )
 
 var (
@@ -100,10 +101,9 @@ func Start() {
 		rpc,
 		new(new_user_conn.NewConnUser))
 
-
-
-	messagemanager.Manager.Pder.GetStore().CreateInbox(&user.User{Id:"123"},[]*user.User{})
-	messagemanager.Manager.Pder.GetStore().CreateInbox(&user.User{Id:"55"},[]*user.User{})
+	messagemanager.Manager.Pder.GetStore().CreateInbox(&user.User{Id: "123"}, []*user.User{})
+	messagemanager.Manager.Pder.GetStore().CreateInbox(&user.User{Id: "55"}, []*user.User{})
+	messagemanager.Manager.Pder.GetStore().CreateInbox(&user.User{Id: "23034087"}, []*user.User{})
 
 	for {
 		//fmt.Println(inst.Repository().Get("cm"))

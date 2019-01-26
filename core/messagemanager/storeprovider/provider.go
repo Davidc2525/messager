@@ -93,7 +93,6 @@ func (this *SaveAllInbox) ReleaseOp() {
 /*
 Proveedor de almacenamiento de inbox, para proveedor de mensajeria.
 stack: StoreProvider -> Provider -> Manager
-
 */
 type StoreProvider interface {
 	//MakeOp() chan StoreOp
@@ -108,13 +107,11 @@ type StoreProvider interface {
 
 	SaveAllInbox() error
 
-
 	MapPrivateItem(item *inboxitem.InboxItem) error
 	UnMapPrivateItem(item *inboxitem.InboxItem) error
-	GetPrivateItem(usr1 *user.User,usr2 *user.User) (string, error)
-
+	GetPrivateItem(usr1 *user.User, usr2 *user.User) (string, error)
 
 	//messages
 
-	StoreMessage(item *inboxitem.InboxItem,message *message.Message) error
+	StoreMessage(item *inboxitem.InboxItem, msg *message.Message) error
 }
